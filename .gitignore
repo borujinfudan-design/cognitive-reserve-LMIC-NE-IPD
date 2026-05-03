@@ -1,0 +1,89 @@
+# ============================================================
+# .gitignore — cognitive-reserve-LMIC-NE-IPD
+# ============================================================
+# CRITICAL: never commit individual-level data
+# ============================================================
+
+# ---- Cohort raw / derived data (CRITICAL — never commit) ----
+# data/raw/ contains symlinks to local cohort folders; symlinks themselves
+# also excluded so we never accidentally chase them and commit data
+data/raw/**
+!data/raw/.gitkeep
+!data/raw/README.md
+data/derived/**
+!data/derived/.gitkeep
+!data/derived/README.md
+
+# ---- Policy tables ARE committed (public information) ----
+!data/policy/
+!data/policy/**
+
+# ---- Results outputs (regeneratable; large files excluded) ----
+results/figures/*.tiff
+results/figures/*.png
+results/figures/*.pdf
+results/tables/*.csv
+results/tables/*.xlsx
+results/tables/*.docx
+results/logs/*.log
+results/logs/*.txt
+!results/**/.gitkeep
+
+# ---- targets pipeline cache ----
+_targets/
+_targets_meta/
+*.targets-*
+
+# ---- renv (keep lock file, ignore library) ----
+renv/library/
+renv/local/
+renv/staging/
+renv/python/
+.Renviron
+.Rprofile.local
+
+# ---- R session / IDE ----
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+.Rproj.user/
+*.Rcheck/
+
+# ---- Quarto / Manuscript ----
+manuscript/_book/
+manuscript/_freeze/
+manuscript/*.aux
+manuscript/*.log
+manuscript/*.synctex.gz
+manuscript/_files/
+
+# ---- macOS ----
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ---- Windows ----
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ---- Linux ----
+*~
+.directory
+.Trash-*
+
+# ---- Editors ----
+.vscode/
+.idea/
+*.swp
+*.swo
+.cursor/
+
+# ---- Secrets / keys ----
+.env
+.env.local
+*.pem
+*.key
+secrets/
