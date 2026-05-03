@@ -1,6 +1,6 @@
 # cognitive-reserve-LMIC-NE-IPD
 
-> **Education and brain health across the life course in low- and middle-income countries: A multi-cohort triangulation study using natural experiments and individual patient data meta-analysis**
+> **Education and brain health across the life course in low- and middle-income countries: A multi-cohort triangulation study integrating natural experiments, individual patient data analysis, and Mendelian randomization**
 
 [![PROSPERO](https://img.shields.io/badge/PROSPERO-CRD42026XX01-blue)](https://www.crd.york.ac.uk/PROSPERO/)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-green)](LICENSE)
@@ -11,7 +11,7 @@ A coordinated **Bradford Hill triangulation** of four independent study designs 
 
 1. **D1** — China 1986 Compulsory Schooling Law **fuzzy RDD** on mid-life cognition (CHARLS)
 2. **D2** — India post-1947 state-level educational expansion **DID** on late-life dementia prevalence (LASI)
-3. **D3** — **6-cohort IPD meta-analysis** on dementia incidence and cognitive trajectory (HRS, ELSA, SHARE, CHARLS, LASI, MHAS; N ≈ 239,500 / N ≈ 164,500 main analysis)
+3. **D3** — **6-cohort coordinated individual patient data analysis** on dementia incidence and cognitive trajectory (HRS, ELSA, SHARE, CHARLS, LASI, MHAS; N ≈ 239,500 / N ≈ 164,500 main analysis)
 4. **D4** — **2-sample Mendelian randomization** for HIC subsample (Lee 2018 → Bellenguez 2022)
 
 Inference: 4 estimands (LATE / ATT / ATE-association / Genetic effect) are **not pooled**; convergence in direction and magnitude across distinct confounding and selection structures supports a causal interpretation per Lawlor et al. 2016 (IJE).
@@ -125,7 +125,9 @@ Once published, please cite as:
 
 ```
 Li K, Liu H, Jin B, et al. Education and brain health across the life course in
-low- and middle-income countries: A multi-cohort triangulation study using
-natural experiments and individual patient data meta-analysis.
+low- and middle-income countries: A multi-cohort triangulation study integrating
+natural experiments, individual patient data analysis, and Mendelian randomization.
 Lancet Healthy Longev. 202?;?(?):?-?. doi:?
 ```
+
+> **Article Type Note**: This is an **Original Research Article** (not a systematic review). The Web of Science Document Type is expected to be `Article` (single label, no `Meta-Analysis` co-tag), in compliance with our institutional research output guidelines.
