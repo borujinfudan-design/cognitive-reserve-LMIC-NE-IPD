@@ -1,20 +1,22 @@
 # cognitive-reserve-LMIC-NE-IPD
 
-> **Education and brain health across the life course in low- and middle-income countries: A multi-cohort triangulation study integrating natural experiments, individual patient data analysis, and Mendelian randomization**
+> **Education and brain health across the life course in low- and middle-income countries: A natural-experiment causal inference study with cross-cohort triangulation**
 
-[![PROSPERO](https://img.shields.io/badge/PROSPERO-CRD42026XX01-blue)](https://www.crd.york.ac.uk/PROSPERO/)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-green)](LICENSE)
 [![R](https://img.shields.io/badge/R-%E2%89%A54.5-276DC3?logo=r)](https://www.r-project.org/)
-[![Pre-registered](https://img.shields.io/badge/Pre--registered-OSF-yellow)](https://osf.io/)
+[![Pre-registered: OSF](https://img.shields.io/badge/Pre--registered-OSF-yellow)](https://osf.io/)
+[![Type: Original Article](https://img.shields.io/badge/Type-Original%20Article-success)](https://www.elsevier.com/researcher/author/policies-and-guidelines/research-elements)
 
-A coordinated **Bradford Hill triangulation** of four independent study designs to test whether education causally protects late-life brain health in low- and middle-income countries (LMICs):
+An **original causal inference study** integrating four independent quasi-experimental and genetic-instrument designs to test whether education causally protects late-life brain health in low- and middle-income countries (LMICs).
 
-1. **D1** — China 1986 Compulsory Schooling Law **fuzzy RDD** on mid-life cognition (CHARLS)
-2. **D2** — India post-1947 state-level educational expansion **DID** on late-life dementia prevalence (LASI)
-3. **D3** — **6-cohort coordinated individual patient data analysis** on dementia incidence and cognitive trajectory (HRS, ELSA, SHARE, CHARLS, LASI, MHAS; N ≈ 239,500 / N ≈ 164,500 main analysis)
-4. **D4** — **2-sample Mendelian randomization** for HIC subsample (Lee 2018 → Bellenguez 2022)
+This is **NOT** a systematic review of published literature. The four designs all use original individual-level data and original statistical estimation:
 
-Inference: 4 estimands (LATE / ATT / ATE-association / Genetic effect) are **not pooled**; convergence in direction and magnitude across distinct confounding and selection structures supports a causal interpretation per Lawlor et al. 2016 (IJE).
+1. **D1** — China 1986 Compulsory Schooling Law **fuzzy RDD** on mid-life cognition (CHARLS) — *primary causal design*
+2. **D2** — India post-1947 state-level educational expansion **DID** on late-life dementia prevalence (LASI) — *primary causal design*
+3. **D3** — **Cross-cohort harmonised individual-participant analysis** on dementia incidence (HRS, ELSA, SHARE, CHARLS, LASI, MHAS; N ≈ 239,500 / N ≈ 164,500) — *confirmatory triangulation arm*
+4. **D4** — **Two-sample Mendelian randomization** in European-ancestry subsample (Lee 2018 → Bellenguez 2022) — *genetic-instrument triangulation arm*
+
+**Inferential framework**: The 4 estimands (LATE / ATT / log-HR / log-OR) are **not formally pooled**. Convergence in direction and magnitude across the four designs — each with distinct confounding and selection structures — constitutes the inferential signal per Lawlor et al. 2016 (IJE) Bradford Hill triangulation framework.
 
 ---
 
@@ -105,9 +107,9 @@ cognitive-reserve-LMIC-NE-IPD/
 
 - **R version**: 4.5.2 (locked via `renv.lock`)
 - **Pipeline orchestration**: `targets` package (deterministic dependency graph)
-- **Pre-registration**: PROSPERO CRD42026XX01 (companion sister paper: CRD42026XX02)
-- **Pre-analysis plan**: deposited at OSF (link to be added on publication)
-- **Reporting guidelines**: PRISMA-IPD (D3) + STROBE-MR (D4) + McKenzie & Pencavel 2017 (D1, D2)
+- **Pre-registration**: Open Science Framework — DOI `10.17605/OSF.IO/{{XXXXX}}` (companion sister paper: separate OSF DOI)
+- **Why OSF, not PROSPERO**: PROSPERO is restricted to systematic reviews; this study is a multi-design causal inference investigation, for which OSF is the established pre-registration venue
+- **Reporting guidelines**: PRISMA-IPD (D3 harmonised analysis) + STROBE-MR (D4 MR) + McKenzie & Pencavel 2017 + Imbens-Lemieux 2008 (D1 RDD) + Goodman-Bacon 2021 + Roth-Sant'Anna-Bilinski 2023 (D2 DID)
 
 ---
 
@@ -125,9 +127,8 @@ Once published, please cite as:
 
 ```
 Li K, Liu H, Jin B, et al. Education and brain health across the life course in
-low- and middle-income countries: A multi-cohort triangulation study integrating
-natural experiments, individual patient data analysis, and Mendelian randomization.
-Lancet Healthy Longev. 202?;?(?):?-?. doi:?
+low- and middle-income countries: A natural-experiment causal inference study
+with cross-cohort triangulation. Lancet Healthy Longev. 202?;?(?):?-?. doi:?
 ```
 
-> **Article Type Note**: This is an **Original Research Article** (not a systematic review). The Web of Science Document Type is expected to be `Article` (single label, no `Meta-Analysis` co-tag), in compliance with our institutional research output guidelines.
+> **Article Type Note**: This is an **Original Research Article (causal inference / quasi-experimental observational study)**. It is not a systematic review. The Web of Science Document Type is expected to be `Article` (single label, no `Meta-Analysis` or `Review` co-tag), in compliance with our institutional research output guidelines. The pre-registration is at OSF (not PROSPERO) for this same reason.
