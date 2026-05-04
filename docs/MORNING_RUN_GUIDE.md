@@ -20,7 +20,7 @@
 
 ---
 
-## 第 2 步 · 一键安装所有 R 包（首次约 15-20 分钟）
+## 第 2 步 · 一键安装核心 R 包（首次约 15–20 分钟）
 
 在 RStudio Console 输入：
 
@@ -28,20 +28,33 @@
 source("_setup.R")
 ```
 
-回车。会自动：
+会自动：
 
-1. 安装 `renv` 包管理器
-2. 安装本项目所有依赖（约 30 个包，含 `haven`, `targets`, `survival`, `metafor`, `rdrobust`, `fixest`, `TwoSampleMR` 等）
-3. 创建 `data/derived/`、`results/logs/` 等目录
+1. 安装 `renv` 包管理器（若尚未安装）
+2. 若已有 `renv.lock`：`renv::restore()`（与仓库锁定版本一致）
+3. 若无锁文件：初始化 renv（**`restart = FALSE`**，不会在 RStudio 里半截重启打断脚本），再 **CRAN 安装核心依赖**（`haven`, `targets`, `survival`, `metafor`, `rdrobust`, `fixest`, `MendelianRandomization` 等）
+4. **不会**自动安装 GitHub 上的 `TwoSampleMR` / `MRPRESSO`——避免首次环境就被 IEU 依赖卡死；跑通 `prep_HRS` **不需要**它们
+5. 创建 `data/derived/`、`results/logs/` 等目录
+
+**D4 孟德尔随机化**（等主流程跑通后再执行）：
+
+```r
+source("_install_optional_MR.R")
+```
 
 期间会弹出多个安装进度条。**全部回答 `y`**（如果问要不要从 source 编译）。
 
 完成会看到：
+
 ```
-[setup] complete. Next: run targets::tar_make()
+[setup] complete.
+  Next (HRS prep):  targets::tar_make(prep_HRS)
+  D4 MR (optional): source("_install_optional_MR.R"); tar_make(mr_hic)
 ```
 
-> ☕ 这一步喝杯咖啡的功夫。下次再开就不用了。
+> ☕ 这一步喝杯咖啡的功夫。下次再开：有 `renv.lock` 则只需 `source("_setup.R")`（很快）。
+
+> **技术说明**：之前 `_setup.R` 在 `renv::init()` 时默认 `restart = interactive()`，RStudio 会**重启会话**导致后面的 `renv::install()` **整段被跳过**；现已显式 `restart = FALSE`，同一会话内可装完所有核心包并 `snapshot`。
 
 ---
 

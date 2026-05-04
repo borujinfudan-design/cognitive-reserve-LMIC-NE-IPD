@@ -10,6 +10,9 @@ library(targets)
 library(tarchetypes)
 
 # ---- Required packages (loaded in every worker) ----
+# Global packages for workers. TwoSampleMR / MRPRESSO are GitHub-only — loaded
+# only for tar_target(mr_hic) so tar_make(prep_HRS) works without them.
+# After: source("_install_optional_MR.R")
 tar_option_set(
   packages = c(
     "haven", "data.table", "dplyr", "tidyr", "purrr", "stringr",
@@ -19,7 +22,7 @@ tar_option_set(
     "rdrobust", "rddensity",
     "fixest", "bacondecomp",
     "Synth",
-    "TwoSampleMR", "MendelianRandomization", "MRPRESSO",
+    "MendelianRandomization",
     "mice", "lavaan",
     "knitr", "rmarkdown", "quarto"
   ),
@@ -65,7 +68,12 @@ list(
   tar_target(did_india, run_DID_India(prep_LASI), format = "rds"),
 
   # ---- Stage 4d: D4 MR (HIC subset) ----
-  tar_target(mr_hic, run_MR_HIC(), format = "rds"),
+  tar_target(
+    mr_hic,
+    run_MR_HIC(),
+    format = "rds",
+    packages = c("TwoSampleMR", "MendelianRandomization", "MRPRESSO")
+  ),
 
   # ---- Stage 5: triangulation (main inference figure) ----
   tar_target(fig5_triangulation,

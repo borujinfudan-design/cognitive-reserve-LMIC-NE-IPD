@@ -27,13 +27,18 @@ This is **NOT** a systematic review of published literature. The four designs al
 git clone https://github.com/borujinfudan-design/cognitive-reserve-LMIC-NE-IPD.git
 cd cognitive-reserve-LMIC-NE-IPD
 
-# 2. Install R packages (uses renv lock file)
-Rscript -e 'install.packages("renv"); renv::restore()'
+# 2. Bootstrap R environment (run from project root — open .Rproj in RStudio)
+Rscript -e 'source("_setup.R")'
+# If renv.lock is present: renv::restore(); else: renv::init + install core CRAN deps + snapshot
 
-# 3. Run full pipeline (uses targets package)
-Rscript -e 'targets::tar_make()'
+# 3. HRS cohort prep (no GitHub MR packages required)
+Rscript -e 'targets::tar_make(prep_HRS)'
 
-# 4. Outputs land in results/{tables,figures,logs}
+# 4. Optional: install TwoSampleMR + MRPRESSO, then full pipeline
+# Rscript -e 'source("_install_optional_MR.R")'
+# Rscript -e 'targets::tar_make()'
+
+# Outputs: results/{tables,figures,logs}, data/derived/*.rds
 ```
 
 > ⚠️ **Individual-level data are NOT in this repository.** They are obtained under standard Data Use Agreements from the respective cohort authorities (HRS, ELSA, SHARE, CHARLS, LASI, MHAS) and stored locally outside this repo. See `data/raw/README.md` for paths.
@@ -65,7 +70,8 @@ cognitive-reserve-LMIC-NE-IPD/
 │       ├── derive_dementia.R
 │       └── plot_themes.R
 ├── _targets.R                      # pipeline definition (targets package)
-├── _setup.R                        # one-shot setup (renv::restore + dirs)
+├── _setup.R                        # renv bootstrap (core CRAN only; restart-safe)
+├── _install_optional_MR.R         # TwoSampleMR + MRPRESSO (GitHub) for D4
 ├── data/
 │   ├── raw/                        # symlinks to local datasets (NOT committed)
 │   ├── derived/                    # harmonized .rds outputs (NOT committed)
@@ -105,7 +111,9 @@ cognitive-reserve-LMIC-NE-IPD/
 
 ## Reproducibility
 
-- **R version**: 4.5.2 (locked via `renv.lock`)
+- **R version**: 4.3+ recommended; exact versions locked via `renv.lock` after you run `source("_setup.R")` once (commit the lockfile to git when stable).
+- **Setup**: `source("_setup.R")` — core CRAN deps for prep + quasi-experimental + meta; **`restart = FALSE`** so RStudio does not skip installs mid-script.
+- **D4 MR (optional)**: `source("_install_optional_MR.R")` installs `TwoSampleMR` + `MRPRESSO` from GitHub (not required for `tar_make(prep_HRS)`).
 - **Pipeline orchestration**: `targets` package (deterministic dependency graph)
 - **Pre-registration**: Open Science Framework — DOI `10.17605/OSF.IO/{{XXXXX}}` (companion sister paper: separate OSF DOI)
 - **Why OSF, not PROSPERO**: PROSPERO is restricted to systematic reviews; this study is a multi-design causal inference investigation, for which OSF is the established pre-registration venue
