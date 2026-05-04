@@ -61,9 +61,18 @@ prep_HRS_fn <- function(
   .log("prep_HRS_fn() started")
 
   # ---------- 1. locate file ----------
-  hrs_path <- file.path(raw_dir, "H_HRS_d.dta")
-  if (!file.exists(hrs_path)) {
-    stop(sprintf("[prep_HRS] cannot find %s — check that data/raw/HRS is symlinked correctly", hrs_path))
+  # Search common subfolder layouts of the HRS data tree
+  candidates <- c(
+    file.path(raw_dir, "H_HRS_d.dta"),
+    file.path(raw_dir, "02_Gateway_Harmonized_HRS", "H_HRS_d.dta"),
+    file.path(raw_dir, "Gateway_Harmonized_HRS", "H_HRS_d.dta")
+  )
+  hrs_path <- Find(file.exists, candidates)
+  if (is.null(hrs_path)) {
+    stop(sprintf(
+      "[prep_HRS] cannot find H_HRS_d.dta under %s. Tried:\n  - %s",
+      raw_dir, paste(candidates, collapse = "\n  - ")
+    ))
   }
   .log("reading ", hrs_path, " (", round(file.info(hrs_path)$size / 1e6, 1), " MB)")
 
