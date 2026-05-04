@@ -41,7 +41,11 @@ if (file.exists("renv.lock")) {
 } else if (dir.exists("renv") && file.exists("renv/activate.R")) {
   message("[setup] renv/ exists but no renv.lock — installing core packages ...")
   renv::install(.renv_core_pkgs)
-  renv::snapshot(prompt = FALSE, type = "simple")
+  renv::snapshot(
+    packages = .renv_core_pkgs,
+    prompt = FALSE,
+    type = "simple"
+  )
 } else {
   message("[setup] First-time renv init (bare + no session restart) ...")
   renv::init(
@@ -52,7 +56,11 @@ if (file.exists("renv.lock")) {
   message("[setup] Installing core packages (may take several minutes) ...")
   renv::install(.renv_core_pkgs)
   message("[setup] Writing renv.lock ...")
-  renv::snapshot(prompt = FALSE, type = "simple")
+  renv::snapshot(
+    packages = .renv_core_pkgs,
+    prompt = FALSE,
+    type = "simple"
+  )
 }
 
 dirs_needed <- c(
