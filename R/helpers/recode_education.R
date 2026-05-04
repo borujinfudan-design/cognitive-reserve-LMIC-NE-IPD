@@ -152,9 +152,65 @@ recode_education_USA <- function(df) {
 # Placeholder country recodes (TODO in W2)
 # ============================================================
 
+# ============================================================
+# UK — Harmonized ELSA (g2aging Version H)
+# ============================================================
+#
+# Source: Harmonized ELSA Codebook, Version H.
+#
+# Available variable:
+#   raeducl  — UNESCO ISCED-2011 collapsed level (1-3)
+#              1 = Less than upper secondary  (UK no qualifications / O-level)
+#              2 = Upper secondary / vocational (A-level / NVQ 2-3)
+#              3 = Tertiary (degree / NVQ 4-5)
+#
+# Note: Harmonized ELSA Version H does NOT carry continuous years of
+# schooling (raedyrs). HCAP file h_elsa_hcap_a2.dta does carry raedyrs_e
+# but only for the ~1,100 HCAP subsample. We therefore impute years from
+# raeducl using UK-system midpoints commonly used in life-course
+# epidemiology (Banks et al. 2018; Steptoe et al. 2013):
+#
+#   raeducl 1 → 9 yrs   (left school at 14-16; no formal qualification)
+#   raeducl 2 → 12 yrs  (A-level / NVQ 3 typical age 18 leaver)
+#   raeducl 3 → 16 yrs  (university degree typical 21-leaver, +3 sixth form)
+# ------------------------------------------------------------
+
+.ELSA_RAEDUCL_TO_ISCED <- c(`1` = 2L, `2` = 3L, `3` = 6L)
+.ELSA_RAEDUCL_TO_YRS   <- c(`1` = 9,  `2` = 12, `3` = 16)
+
 #' @keywords internal
 recode_education_UK <- function(df) {
-  stop("[recode_education_UK] not implemented yet (W2)")
+
+  if (!"raeducl" %in% names(df)) {
+    stop("[recode_education_UK] expected column raeducl not found")
+  }
+  raeducl_chr <- as.character(df$raeducl)
+
+  edu_yrs   <- as.numeric(.ELSA_RAEDUCL_TO_YRS[raeducl_chr])
+  edu_isced <- as.integer(.ELSA_RAEDUCL_TO_ISCED[raeducl_chr])
+
+  # If HCAP subsample contributed raedyrs_e, prefer it
+  if ("raedyrs_e" %in% names(df)) {
+    raedyrs_e <- suppressWarnings(as.numeric(df$raedyrs_e))
+    raedyrs_e[raedyrs_e < 0 | raedyrs_e > 22] <- NA_real_
+    edu_yrs[!is.na(raedyrs_e)] <- raedyrs_e[!is.na(raedyrs_e)]
+  }
+
+  isced_to_cat <- function(i) {
+    if (is.na(i))       return(NA_character_)
+    if (i <= 1)         return("Primary")
+    if (i == 2)         return("Lower secondary")
+    if (i %in% c(3, 4)) return("Upper secondary")
+    if (i >= 5)         return("Tertiary")
+    NA_character_
+  }
+  edu_cat <- factor(vapply(edu_isced, isced_to_cat, character(1)),
+                    levels = EDU_CAT_LEVELS)
+
+  df$edu_yrs   <- edu_yrs
+  df$edu_isced <- edu_isced
+  df$edu_cat   <- edu_cat
+  df
 }
 
 #' @keywords internal
