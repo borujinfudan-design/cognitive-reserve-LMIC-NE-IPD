@@ -1,5 +1,5 @@
 # ============================================================
-# 02_prep_ELSA.R — English Longitudinal Study of Ageing (1998-2021)
+# 02_prep_ELSA.R — English Longitudinal Study of Ageing (2002-2022)
 # ============================================================
 # Cohort  : ELSA
 # Primary : Gateway Harmonized ELSA Version H (gh_elsa_h.dta)
@@ -20,18 +20,20 @@
 #   Verbal fluency is kept as continuous correlate but excluded from
 #   total to keep cross-cohort harmonisation tight.
 #
-#   Dementia: Harmonized ELSA does not provide an official LW-style
-#   classification. We:
-#     (a) pull r{w}cogimp (the g2aging derived "cognitively impaired"
-#         indicator) where available; treat it as presumptive dementia.
-#     (b) Where (a) is missing, apply LW-style cutoffs to our 0-24 total
-#         (calibrated to HRS prevalence; see Banks et al. 2018; Steel et
-#         al. 2024): 0-7 dementia, 8-11 CIND, 12-24 normal.
-#     (c) HCAP gold-standard classification can be joined as W2.
-#   dem_method tags which path was used.
+#   Dementia: Harmonized ELSA carries no official LW-style classification.
+#   We apply HRS-Langa-Weir-scaled cutpoints to the 0-24 composite
+#   (HRS LW = 0-6 dem on 0-27 ≈ 22% of range; the 24-pt analogue is 0-5):
+#     0-5  → dementia
+#     6-9  → CIND
+#     10-24 → normal
+#   Restricted to age ≥ 65 (HCAP convention; aligns with HRS).
+#   r{w}cogimp (g2aging "cognitively impaired" indicator) is treated as
+#   a CIND-or-worse screen, NOT a dementia diagnosis: used to flip
+#   cind_dx 0→1 only where cutpoints did not already classify dementia.
+#   HCAP gold-standard dementia (h_elsa_hcap_a2.dta) joined in W2.
 # ============================================================
 
-.ELSA_WAVES <- 1:10  # 1998-2021 by 2-year intervals (some gaps)
+.ELSA_WAVES <- 1:10  # ELSA wave 1 = 2002-03, wave 10 = 2021-22 (2-year cycle)
 
 #' Prepare ELSA data into harmonized long format
 #' @export
@@ -140,42 +142,41 @@ prep_ELSA_fn <- function(
        " (", round(100 * mean(!is.na(long$cog_raw)), 1), "%)")
 
   # ---------- 4. dementia / CIND ----------
-  # Path A: g2aging cogimp where available (binary cognitive impairment)
-  cogimp_v <- if ("cogimp" %in% names(long)) suppressWarnings(as.integer(long$cogimp))
-              else rep(NA_integer_, nrow(long))
-
-  # Path B: ELSA-calibrated cutpoints on 0-24 composite
-  #   0-7   → dementia
-  #   8-11  → CIND
-  #   12-24 → normal
+  # ELSA-calibrated cutpoints on the 0-24 composite, scaled from HRS
+  # Langa-Weir 27-point (0-6 dem ≈ 22% of range). Conservative ratio:
+  #   0-5   → dementia      (≈ 21% of 0-24 range; matches HRS LW)
+  #   6-9   → CIND
+  #   10-24 → normal
+  # See Banks et al. 2018; Steel & Steptoe 2018; Llewellyn 2014.
   cog <- long$cog_raw
   dem_b  <- ifelse(is.na(cog), NA_integer_,
-            ifelse(cog >= 0 & cog <=  7, 1L,
-            ifelse(cog >= 8 & cog <= 24, 0L, NA_integer_)))
+            ifelse(cog >= 0 & cog <=  5, 1L,
+            ifelse(cog >= 6 & cog <= 24, 0L, NA_integer_)))
   cind_b <- ifelse(is.na(cog), NA_integer_,
-            ifelse(cog >= 8  & cog <= 11, 1L,
+            ifelse(cog >= 6  & cog <=  9, 1L,
             ifelse(cog >= 0  & cog <= 24, 0L, NA_integer_)))
 
-  # Combine: prefer cogimp (=1 → dementia) when present and =1; else cutoffs.
-  # cogimp = 0 not assumed to imply normal (it may also flag CIND-only),
-  # so for cogimp = 0 we fall back to cutpoints.
   long$dem_dx     <- dem_b
   long$cind_dx    <- cind_b
   long$dem_method <- ifelse(is.na(dem_b), NA_character_, "elsa_cutoffs_2024")
-  use_imp <- !is.na(cogimp_v) & cogimp_v == 1L
-  long$dem_dx[use_imp]     <- 1L
-  long$cind_dx[use_imp]    <- 0L
-  long$dem_method[use_imp] <- "elsa_g2a_cogimp"
 
-  # Restrict classification to age 60+ (ELSA convention; HCAP screens 65+)
+  # g2aging r{w}cogimp is a CIND-or-worse screen (NOT a dementia diagnosis):
+  # use it only to refine cind_dx where our cutpoints disagree.
+  cogimp_v <- if ("cogimp" %in% names(long)) suppressWarnings(as.integer(long$cogimp))
+              else rep(NA_integer_, nrow(long))
+  use_imp <- !is.na(cogimp_v) & cogimp_v == 1L &
+             !is.na(long$dem_dx) & long$dem_dx == 0L  # not already dementia
+  long$cind_dx[use_imp] <- 1L
+
+  # Restrict classification to age 65+ (HCAP convention; aligns with HRS)
   if ("age" %in% names(long)) {
-    young <- !is.na(long$age) & long$age < 60
+    young <- !is.na(long$age) & long$age < 65
     long$dem_dx[young]     <- NA_integer_
     long$cind_dx[young]    <- NA_integer_
     long$dem_method[young] <- NA_character_
   }
   .log("dem_dx classified: ", sum(!is.na(long$dem_dx)), " rows; ",
-       "cogimp override applied to ", sum(use_imp), " rows")
+       "cind_dx flagged from cogimp on ", sum(use_imp), " additional rows")
 
   # ---------- 5. education ----------
   long <- recode_education(long, country = "UK")

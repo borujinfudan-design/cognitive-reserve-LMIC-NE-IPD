@@ -226,5 +226,115 @@ targets::tar_make(prep_ELSA, callr_function = NULL)
 
 ---
 
-> **下次接力点**：跑通 `prep_ELSA`；如果数字合理，并排做 `prep_MHAS`。
+> **回访这份日志**：`docs/PROGRESS_LOG_2026-05-04.md`
+
+---
+
+## 8 · 第二批进展（22:30 - 23:10）
+
+### 8.1 ELSA 痴呆率重校准
+
+**问题**：第一次 `prep_ELSA` 跑出痴呆率 **14.37%**（65+），文献期望 4-7%。
+
+**原因诊断**：原 cutoff `0-7 dem` 在 24 分量表上占 33% range，比 HRS Langa-Weir 在 27 分上的 `0-6 dem`（22%）宽得多；同时 `cogimp` 被错误升级为 dementia 而非 CIND-only screen。
+
+**修复**（commit pending）：
+- ELSA cutoffs 调到 `0-5 dem / 6-9 CIND / 10-24 normal`（≈ 21% 占比，对齐 HRS LW）
+- `r{w}cogimp` 仅作 CIND-or-worse 筛查（不再 override dementia）
+- 限定 age ≥ 65（HCAP convention）
+- iyear 修正：ELSA wave 1 实际是 2002-03，不是 1998
+
+**结果**：dementia → **4.05%**（48,965 人 × 65+ rows），方法论上完全合理。
+
+### 8.2 MHAS（墨西哥）prep 完成
+
+**数据源**：`H_MHAS_d.dta`（Gateway Harmonized MHAS Version D 2001-2022, 225 MB, 6,542 cols, 27,159 persons, 6 waves）
+
+**关键发现**：
+- 没有 g2aging 派生的 `cog` 总分；自建 `imrc8 + dlrc8`(0-16) + `orient_m`(0-4) = `cog_full`(0-20, W2+) / `cog_words`(0-16, W1)
+- 没有 race 变量
+- 没有 birth state（rabplace 缺失）；只有 hh{w}rural / hh{w}state（当前居住地）
+- `r{w}proxy` 当 CIND screen 用
+
+**输出**：`mhas_long.rds` — 92,245 person-wave rows × 22 cols
+- waves 1-6（2001/03/12/15/18/21）
+- cog_words 92.2%, cog_full 77%
+- **dementia 8.27%**（37,127 65+ rows）— 文献期望 6-9%，✅
+- **edu_yrs 5.71 ± 4.86**（典型 LMIC 水平）
+
+### 8.3 LASI（印度）prep 完成
+
+**数据源**：`H_LASI_a3.dta`（Gateway Harmonized LASI Version A.3 2017-2021, 155 MB, 1,462 cols, 73,408 persons, **W1 only**）
+
+**关键发现**：
+- 单波（A.4 还未发布；longitudinal Cox 暂不可行，作 prevalent IPD + D2 DID 治疗指派）
+- ID 用 `prim_key`
+- **`rabplace` = 出生州（1-37，含 28 邦+ 9 联邦属地/地区）→ D2 DID 直接可用**
+- `hh1state` = 当前州；`hh1rural` = 城乡（65% rural ✓）
+- 复合分 `imrc + dlrc + orient` = 0-24（与 ELSA 同标度）
+
+**输出**：`lasi_long.rds` — 73,408 rows × 22 cols
+- median age 57（IQR 49-66）
+- cog_raw 99% filled
+- **dementia (provisional) 11.34%** — 偏高；`dem_method = "lasi_cutoffs_2024_provisional"`，**等 LASI-DAD 印记数据再校准**
+- **edu_yrs 4.30 ± 4.91**（极端 LMIC）
+- 64.6% rural ✓
+- **37 个 rabplace 唯一值**（D2 DID 可用）
+
+### 8.4 CHARLS（中国）v0.1 prep 完成
+
+**数据源**：CHARLS 2011 baseline native（demographic_background.dta + health_status_and_functioning.dta）
+
+**实施策略**：CHARLS native 5 波列名差异极大（`dc006s*` → `dc006_1_s*` → `dc006_wordlist_*` → `dc013_w4_*_s*`），W2 sprint 才能完整跑 5 波；今天先做 2011 baseline 确保 D1 RDD 和 IPD-meta 至少有 China 的 prevalent contribution。
+
+**关键 debug**：
+- 第一次 cog_raw 只填 3.2% — 误把 `dc026_1/2`（timing 变量，单位秒）当成 delayed recall 计数
+- 实际 delayed recall 在 **`dc027s1-s10`**（与 `dc006s1-s10` 同结构）
+- `dc006s1-s10` 编码：value 1-10 = 该 slot 召回了哪个词，11 = "None"，NA = 未答；count = sum(value ∈ 1:10)
+- `dc003-005` orient：1=correct, 2=wrong（不是 0/1）
+- 修复后 cog_raw 填 **69%**
+
+**输出**：`charls_long.rds` — 17,705 rows × 22 cols（单波）
+- median age 58（IQR 51-65）
+- **dementia 10.9%**（2,779 65+ rows，provisional）
+- **edu_yrs 5.31 ± 4.31**
+- bd001 → years map：1→0, 2→3, 3→4, 4→6, 5→9, 6→12, 7→12, 8→15, 9→16, 10→19
+- **28 个 province codes**（CHARLS 内部 2 位码，需 W2 加 GB-T 2260 lookup）→ D1 RDD ready
+
+### 8.5 五队列总览（HRS / ELSA / MHAS / LASI / CHARLS）
+
+| Cohort | N persons | edu_yrs | Dem % (65+) | 用途 |
+|---|---|---|---|---|
+| HRS | 37k | 12.7 | 10.7%（LW gold） | D3 IPD HIC 参考、D4 MR |
+| ELSA | 21,679 | 11.77 | **4.05%** | D3 IPD HIC 参考 |
+| MHAS | 27,159 | 5.71 | **8.27%** | D3 IPD LMIC（拉美） |
+| LASI | 73,408 | 4.30 | 11.3%（prov） | D3 + D2 India DID |
+| CHARLS | 17,705 | 5.31 | 10.9%（prov, 1 波） | D3 + D1 China RDD |
+
+**论点验证**：HIC（HRS/ELSA）edu ≈ 12，LMIC（MHAS/LASI/CHARLS）edu ≈ 5 — 7 年的教育差距正是认知储备假说要解释的核心异质性。
+
+### 8.6 推迟到 W2 sprint 的 CHARLS 工作
+
+- 2013/2015/2018/2020 多波 cog 提取（每波列名各异，需 5 个独立 extractor）
+- 2014 Life History 文件：retrospective 教育年份+迁徙史（D1 RDD 内生性 robustness）
+- 2018 Cognition.dta（独立文件，列名 `dc013_w4_*_s*`）
+- 2020 cognition 在 HSF.dta（列名 `dc011_s*` orient + `dc012_s*` 词表）
+- province 内部码 → GB-T 2260 lookup
+- community.dta join（rural/urban 标志）
+- Hu et al. 2024 / Li et al. 2022 dementia algorithm 校准
+
+### 8.7 下一步建议（按优先级）
+
+1. **`combine_5cohorts_fn`**：合并 5 队列到统一 panel；schema 已统一，应该 ~30 行代码
+2. **`build_table1`**：跨 5 队列描述统计（age, sex, edu, dem prevalence）→ Table 1
+3. **`run_cox_per_cohort`**：HRS/ELSA/MHAS 三队列做 incident dementia Cox（CHARLS/LASI 单波只能贡献 prevalent）
+4. **`pool_HR_meta`**：metafor 随机效应 pooling
+5. **D1 RDD（China 1986 reform）**：CHARLS province × 1972 cohort
+6. **D2 DID（India 1947+ expansion）**：LASI rabplace × birth year × policy timing
+7. **D4 MR**：HRS apoe4 + PGS_AD 子集
+8. CHARLS 多波（W2 sprint）
+
+---
+
+> **下次接力点**：实施 `combine_5cohorts_fn` + `build_table1`；或先做 D1 RDD（CHARLS 单波就够，能马上出第一个 causal estimate）。
 > **回访这份日志**：`docs/PROGRESS_LOG_2026-05-04.md`

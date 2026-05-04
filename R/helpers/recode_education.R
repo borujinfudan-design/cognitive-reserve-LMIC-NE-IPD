@@ -223,12 +223,157 @@ recode_education_CN <- function(df) {
   stop("[recode_education_CN] not implemented yet (W2)")
 }
 
+# ============================================================
+# IN — Harmonized LASI (g2aging Version A.3)
+# ============================================================
+#
+# Source: Harmonized LASI Codebook, Version A.3 (2017-2021).
+#
+# Available variables:
+#   raedyrs  — continuous years of schooling (0-26)
+#              Range covers Indian system extensions to Master/PhD.
+#   raeducl  — 3-cat ISCED collapsed
+#              1 = Less than upper secondary
+#              2 = Upper secondary / vocational
+#              3 = Tertiary
+#
+# Indian system anchors (NSO 75th round; Banks et al. 2020):
+#   raeducl 1 → 4 yrs   (median primary attainment in pre-1990 cohort;
+#                        large fraction of LASI sample = 0 yrs / illiterate)
+#   raeducl 2 → 11 yrs  (X → XII, upper secondary completed)
+#   raeducl 3 → 15 yrs  (Bachelor: typical 3-yr undergraduate)
+# ------------------------------------------------------------
+
+.LASI_RAEDUCL_TO_ISCED <- c(`1` = 2L, `2` = 3L, `3` = 6L)
+.LASI_RAEDUCL_TO_YRS   <- c(`1` = 4,  `2` = 11, `3` = 15)
+
 #' @keywords internal
 recode_education_IN <- function(df) {
-  stop("[recode_education_IN] not implemented yet (W2)")
+
+  if (!"raeducl" %in% names(df) && !"raedyrs" %in% names(df)) {
+    stop("[recode_education_IN] need at least one of raedyrs / raeducl")
+  }
+
+  raedyrs_num <- if ("raedyrs" %in% names(df))
+                   suppressWarnings(as.numeric(df$raedyrs))
+                 else rep(NA_real_, nrow(df))
+  raedyrs_num[raedyrs_num < 0 | raedyrs_num > 26] <- NA_real_
+
+  raeducl_chr <- if ("raeducl" %in% names(df)) as.character(df$raeducl)
+                 else rep(NA_character_, nrow(df))
+
+  edu_yrs <- raedyrs_num
+  fb <- is.na(edu_yrs) & raeducl_chr %in% names(.LASI_RAEDUCL_TO_YRS)
+  edu_yrs[fb] <- .LASI_RAEDUCL_TO_YRS[raeducl_chr[fb]]
+
+  edu_isced <- as.integer(.LASI_RAEDUCL_TO_ISCED[raeducl_chr])
+
+  isced_from_yrs <- function(y) {
+    if (is.na(y))   return(NA_integer_)
+    if (y == 0)     return(0L)   # never attended (very common in LASI)
+    if (y <  5)     return(1L)   # primary partial
+    if (y <  8)     return(2L)   # primary completed
+    if (y < 11)     return(2L)   # upper primary
+    if (y < 13)     return(3L)   # secondary / higher secondary
+    if (y < 15)     return(4L)   # diploma / vocational
+    if (y >= 15)    return(6L)   # tertiary (UG +)
+    NA_integer_
+  }
+  imp <- vapply(edu_yrs, isced_from_yrs, integer(1))
+  edu_isced[is.na(edu_isced)] <- imp[is.na(edu_isced)]
+
+  isced_to_cat <- function(i) {
+    if (is.na(i))           return(NA_character_)
+    if (i == 0)             return("Less than primary")
+    if (i == 1)             return("Primary")
+    if (i == 2)             return("Lower secondary")
+    if (i %in% c(3, 4))     return("Upper secondary")
+    if (i >= 5)             return("Tertiary")
+    NA_character_
+  }
+  edu_cat <- factor(vapply(edu_isced, isced_to_cat, character(1)),
+                    levels = EDU_CAT_LEVELS)
+
+  df$edu_yrs   <- edu_yrs
+  df$edu_isced <- edu_isced
+  df$edu_cat   <- edu_cat
+  df
 }
+
+# ============================================================
+# MX — Harmonized MHAS (g2aging Version D)
+# ============================================================
+#
+# Source: Harmonized MHAS Codebook, Version D (2001-2022).
+#
+# Available variables:
+#   raedyrs  — continuous years of schooling (0-23)
+#   raeducl  — 3-cat ISCED collapsed
+#              1 = Less than upper secondary
+#              2 = Upper secondary / vocational
+#              3 = Tertiary
+#
+# Mexican system anchors (Wong, Michaels-Obregón, Palloni 2017;
+# INEGI 2010 educational attainment):
+#   raeducl 1 → 6 yrs   (primaria completed / not; modal level for cohorts
+#                        born pre-1960 in rural Mexico)
+#   raeducl 2 → 11 yrs  (secundaria + parcial bachillerato)
+#   raeducl 3 → 16 yrs  (licenciatura / tertiary)
+# raedyrs (continuous) is preferred when valid.
+# ------------------------------------------------------------
+
+.MHAS_RAEDUCL_TO_ISCED <- c(`1` = 2L, `2` = 3L, `3` = 6L)
+.MHAS_RAEDUCL_TO_YRS   <- c(`1` = 6,  `2` = 11, `3` = 16)
 
 #' @keywords internal
 recode_education_MX <- function(df) {
-  stop("[recode_education_MX] not implemented yet (W2)")
+
+  if (!"raeducl" %in% names(df) && !"raedyrs" %in% names(df)) {
+    stop("[recode_education_MX] need at least one of raedyrs / raeducl")
+  }
+
+  raedyrs_num <- if ("raedyrs" %in% names(df))
+                   suppressWarnings(as.numeric(df$raedyrs))
+                 else rep(NA_real_, nrow(df))
+  raedyrs_num[raedyrs_num < 0 | raedyrs_num > 23] <- NA_real_
+
+  raeducl_chr <- if ("raeducl" %in% names(df)) as.character(df$raeducl)
+                 else rep(NA_character_, nrow(df))
+
+  edu_yrs <- raedyrs_num
+  fb <- is.na(edu_yrs) & raeducl_chr %in% names(.MHAS_RAEDUCL_TO_YRS)
+  edu_yrs[fb] <- .MHAS_RAEDUCL_TO_YRS[raeducl_chr[fb]]
+
+  edu_isced <- as.integer(.MHAS_RAEDUCL_TO_ISCED[raeducl_chr])
+
+  # If raeducl missing but raedyrs present, derive ISCED from years
+  isced_from_yrs <- function(y) {
+    if (is.na(y))   return(NA_integer_)
+    if (y <  3)     return(0L)   # less than primary
+    if (y <  6)     return(1L)   # primary partial
+    if (y <  9)     return(2L)   # primary completed / lower secondary
+    if (y < 12)     return(3L)   # upper secondary
+    if (y < 16)     return(4L)   # post-secondary non-tertiary
+    if (y >= 16)    return(6L)   # tertiary
+    NA_integer_
+  }
+  imp <- vapply(edu_yrs, isced_from_yrs, integer(1))
+  edu_isced[is.na(edu_isced)] <- imp[is.na(edu_isced)]
+
+  isced_to_cat <- function(i) {
+    if (is.na(i))           return(NA_character_)
+    if (i == 0)             return("Less than primary")
+    if (i == 1)             return("Primary")
+    if (i == 2)             return("Lower secondary")
+    if (i %in% c(3, 4))     return("Upper secondary")
+    if (i >= 5)             return("Tertiary")
+    NA_character_
+  }
+  edu_cat <- factor(vapply(edu_isced, isced_to_cat, character(1)),
+                    levels = EDU_CAT_LEVELS)
+
+  df$edu_yrs   <- edu_yrs
+  df$edu_isced <- edu_isced
+  df$edu_cat   <- edu_cat
+  df
 }
