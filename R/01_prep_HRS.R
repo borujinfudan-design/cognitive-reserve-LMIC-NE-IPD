@@ -164,53 +164,80 @@ prep_HRS_fn <- function(
   long <- long[has_iyear | has_age, , drop = FALSE]
   .log("after dropping rows missing both iwendy and agey_e: ", nrow(long), " rows")
 
-  # ---------- 5. join Langa-Weir 2022 (override cogtot when imputed) ----------
+  # ---------- 5. join Langa-Weir 2022 (cogtot27 + official cogfunction) ----------
+  # Langa-Weir file uses split ID (hhid string + pn string); RAND HRS hhidpn
+  # = hhid*1000 + pn (numeric). Also pull the official cogfunction{year}
+  # classification (1 = normal, 2 = CIND, 3 = dementia) — preferred over
+  # our own cutpoints in derive_dementia.
   lw_path <- file.path(raw_dir,
     "11_LangaWeir_Cognitive_Classification", "cogfinalimp_9522wide.dta")
+  long$cog_lw     <- NA_real_
+  long$dem_lw     <- NA_integer_
+  long$cind_lw    <- NA_integer_
   if (file.exists(lw_path)) {
     lw_wide <- haven::read_dta(lw_path)
-    id_col  <- intersect(c("hhidpn", "HHIDPN"), names(lw_wide))[1]
-    if (is.na(id_col)) {
-      .log("WARN: Langa-Weir file has no hhidpn/HHIDPN column; skipping LW join")
-    } else {
-      # Build LW long: (hhidpn, wave, cog_lw)
+    if (all(c("hhid", "pn") %in% names(lw_wide))) {
+      lw_wide$hhidpn <- as.numeric(lw_wide$hhid) * 1000 + as.numeric(lw_wide$pn)
       lw_rows <- list()
       for (w in names(.HRS_WAVE_YEAR)) {
-        yr <- .HRS_WAVE_YEAR[[w]]
-        col <- sprintf("cogtot27_imp%d", yr)
-        if (col %in% names(lw_wide)) {
-          v <- as.numeric(lw_wide[[col]])
-          v[v < 0 | v > 27] <- NA_real_
+        yr  <- .HRS_WAVE_YEAR[[w]]
+        col_cog <- sprintf("cogtot27_imp%d", yr)
+        col_fn  <- sprintf("cogfunction%d",  yr)
+        if (col_cog %in% names(lw_wide) || col_fn %in% names(lw_wide)) {
+          v_cog <- if (col_cog %in% names(lw_wide)) as.numeric(lw_wide[[col_cog]])
+                   else rep(NA_real_, nrow(lw_wide))
+          v_cog[v_cog < 0 | v_cog > 27] <- NA_real_
+          v_fn  <- if (col_fn  %in% names(lw_wide)) as.integer(lw_wide[[col_fn]])
+                   else rep(NA_integer_, nrow(lw_wide))
           lw_rows[[w]] <- data.frame(
-            hhidpn = lw_wide[[id_col]],
-            wave   = as.integer(w),
-            cog_lw = v,
+            hhidpn  = lw_wide$hhidpn,
+            wave    = as.integer(w),
+            cog_lw  = v_cog,
+            dem_lw  = ifelse(is.na(v_fn), NA_integer_,
+                       ifelse(v_fn == 3L, 1L,
+                       ifelse(v_fn %in% c(1L, 2L), 0L, NA_integer_))),
+            cind_lw = ifelse(is.na(v_fn), NA_integer_,
+                       ifelse(v_fn == 2L, 1L,
+                       ifelse(v_fn %in% c(1L, 3L), 0L, NA_integer_))),
             stringsAsFactors = FALSE
           )
         }
       }
       lw_long <- do.call(rbind.data.frame, lw_rows)
-      lw_long <- lw_long[!is.na(lw_long$cog_lw), , drop = FALSE]
+      lw_long <- lw_long[!is.na(lw_long$cog_lw) | !is.na(lw_long$dem_lw),
+                         , drop = FALSE]
       .log("Langa-Weir long: ", nrow(lw_long),
-           " (person × wave) imputed cogtot27 values")
+           " (person x wave) — cog_lw filled: ",
+           sum(!is.na(lw_long$cog_lw)), "; dem_lw classified: ",
+           sum(!is.na(lw_long$dem_lw)))
+      long$cog_lw <- long$dem_lw <- long$cind_lw <- NULL
       long <- merge(long, lw_long, by = c("hhidpn", "wave"), all.x = TRUE)
-      # Prefer LW imputed total; fall back to RAND r{w}cogtot
-      if (!"cogtot" %in% names(long)) long$cogtot <- NA_real_
-      long$cog_raw <- ifelse(!is.na(long$cog_lw),
-                             as.numeric(long$cog_lw),
-                             as.numeric(long$cogtot))
-      long$cog_lw <- NULL
-      .log("cog_raw filled: ", sum(!is.na(long$cog_raw)), " / ",
-           nrow(long), " rows (", round(100 * mean(!is.na(long$cog_raw)), 1), "%)")
+    } else {
+      .log("WARN: Langa-Weir file lacks hhid+pn columns; skipping LW join")
     }
   } else {
-    .log("INFO: Langa-Weir file not found at ", lw_path, " — using RAND cogtot only")
-    long$cog_raw <- if ("cogtot" %in% names(long)) as.numeric(long$cogtot) else NA_real_
+    .log("INFO: Langa-Weir file not found at ", lw_path)
   }
+
+  # Merge cog_raw priority: LW imputed > RAND r{w}cogtot
+  if (!"cogtot" %in% names(long)) long$cogtot <- NA_real_
+  long$cog_raw <- ifelse(!is.na(long$cog_lw),
+                         as.numeric(long$cog_lw),
+                         as.numeric(long$cogtot))
+  .log("cog_raw filled: ", sum(!is.na(long$cog_raw)), " / ",
+       nrow(long), " rows (", round(100 * mean(!is.na(long$cog_raw)), 1), "%)")
 
   # ---------- 6. apply harmonization helpers ----------
   long <- recode_education(long, country = "USA")
   long <- derive_dementia(long, method = "langa_weir_2020")
+
+  # Override our cutpoints with the OFFICIAL Langa-Weir classification
+  # wherever it is present (covers more waves and uses imputed components).
+  has_lw <- !is.na(long$dem_lw)
+  long$dem_dx[has_lw]  <- long$dem_lw[has_lw]
+  long$cind_dx[has_lw] <- long$cind_lw[has_lw]
+  long$dem_method[has_lw] <- "langa_weir_2022_official"
+  .log("Langa-Weir official dem_dx applied to ", sum(has_lw), " rows")
 
   # ---------- 7. assemble canonical long-format ----------
   sex_levels <- c("Male", "Female")
